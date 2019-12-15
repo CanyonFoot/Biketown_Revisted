@@ -34,7 +34,7 @@ lambdamu <- lambdamu %>% mutate(lambda = tripsarrive/days) %>% mutate(mu = trips
 
 ```{r}
 #get them holding times 
-lambdamu <- lambdamu %>% mutate(q = lambda + mu)
+lambdamu <- lambdamu %>% mutate(q = lambda + mu) %>% arrange(desc(mu))
 head(lambdamu,20)
 ```
 
