@@ -1,0 +1,34 @@
+---
+title: "getlambdamu"
+author: "Claire Jellison"
+date: "12/14/2019"
+output: pdf_document
+---
+
+```{r}
+allbike <- read.csv("data/full_bikes_named.csv")
+```
+
+```{r}
+library(dplyr)
+```
+
+```{r}
+head(allbike)
+```
+
+```{r}
+days <- 184
+departures <- allbike %>% group_by(StartHub) %>% summarise(tripsleave = as.integer(n_distinct(RouteID))) %>% mutate(hub = StartHub)
+arrivals <- allbike %>% group_by(EndHub) %>% summarise(tripsarrive = as.integer(n_distinct(RouteID))) %>% mutate(hub = EndHub)
+lambdamu <- left_join(departures, arrivals, by= "hub")
+lambdamu <- lambdamu %>% select(hub, tripsleave, tripsarrive)
+lambdamu <- lambdamu %>% mutate(lambda = tripsarrive/days) %>% mutate(mu = tripsleave/days)   #lambda is arrival of bikes, mu is departure of bikes
+```
+
+```{r}
+lambdamuf <- lambdamu[!grepl('Pop Up',lambdamu$hub),] #get rid of pop up stations
+head(lambdamuf)
+```
+
+
