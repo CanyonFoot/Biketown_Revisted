@@ -11,6 +11,7 @@ allbike <- read.csv("data/full_bikes_named.csv")
 
 ```{r}
 library(dplyr)
+library(tidyr)
 ```
 
 ```{r}
@@ -27,8 +28,35 @@ lambdamu <- lambdamu %>% mutate(lambda = tripsarrive/days) %>% mutate(mu = trips
 ```
 
 ```{r}
-lambdamuf <- lambdamu[!grepl('Pop Up',lambdamu$hub),] #get rid of pop up stations
-head(lambdamuf)
+#lambdamuf <- lambdamu[!grepl('Pop Up',lambdamu$hub),] #get rid of pop up stations
+#head(lambdamuf)
+```
+
+```{r}
+#get them holding times 
+lambdamu <- lambdamu %>% mutate(q = lambda + mu)
+head(lambdamu,20)
+```
+
+```{r}
+allbikeq <- allbike %>%
+  mutate(yesno = 1) %>%
+  distinct %>%
+  spread(EndHub, yesno, fill = 0)
+allbikeq <- allbikeq %>% select(-X, -RouteID, -PaymentPlan, -StartLatitude, -StartLongitude, -StartDate, -StartTime, -EndLatitude, -EndLongitude, -EndDate, - EndTime, -TripType, -BikeID, -BikeName, -Distance_Miles, -Duration, -RentalAccessPath, -MultipleRental, -StartHub2, -EndHub2)
+
+```
+
+
+```{r}
+sumtorate <- function(col) { 
+  rate <- (sum(col))/184
+  rate
+  }
+allbikeq <- allbikeq %>% group_by(StartHub) %>% summarise_all(funs(sumtorate))
+allbikeq <- allbikeq %>% mutate(totalout = rowSums(.[2:176]))
+allbikeqv <- allbikeq %>% select(StartHub, totalout) %>% arrange(desc(totalout))
+head(allbikeqv)
 ```
 
 
