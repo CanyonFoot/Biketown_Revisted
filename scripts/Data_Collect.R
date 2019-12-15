@@ -16,7 +16,9 @@ library(tidyverse)
 stations <- full_bikes %>%
   filter(!is.na(StartHub)) %>%
   select(StartHub, StartLongitude, StartLatitude) %>%
-  unique()
+  unique() 
+
+write.csv(stations, "data/stations.csv")
 
 bikes_no_start_station <- full_bikes %>%
   filter(is.na(StartHub) &  !is.na(StartLatitude) & !is.na(StartLongitude)) %>% 
