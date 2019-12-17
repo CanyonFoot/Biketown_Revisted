@@ -1,4 +1,5 @@
 library(tidyverse)
+library(leaflet)
 library(lubridate)
 full_bikes <- read.csv("data/full_bikes_named.csv")
 stations <- read.csv("data/stations.csv")
@@ -14,19 +15,35 @@ station_to_station <- full_bikes %>%
 
 count_matrix <- station_to_station %>%
   spread(EndHub, trip_count) 
-  
+
 count_matrix[is.na(count_matrix)] <- 0
 
-colnames(count_matrix)[2:175] == count_matrix$StartHub
+hubs <- as.character(count_matrix$StartHub)
+colnames(count_matrix) <- as.character(colnames(count_matrix))
 
-bike_matrix <- as.matrix(count_matrix[1:174, 2:175])
+count_matrix <- count_matrix %>%
+  ungroup() %>%
+  select(hubs)
+
+colnames(count_matrix)[1:174] == hubs
+
+bike_matrix <- as.matrix(count_matrix[1:174, 1:174])
 colnames(bike_matrix) <- NULL
 
 for (i in 1:174) {
   bike_matrix[i,] <- bike_matrix[i,] / sum(bike_matrix[i,])
 }
-
+library(expm)
 stat_dist_morning <- (bike_matrix %^% 1000)[1,]
+image(t(bike_matrix %^% 1000), col = viridis(10))
+
+
+
+
+
+
+
+
 #### REPEAT FOR AFTERNOON
 
 
@@ -38,17 +55,22 @@ station_to_station <- full_bikes %>%
   group_by(StartHub, EndHub) %>%
   summarise(trip_count = n())
 
+
 count_matrix <- station_to_station %>%
   spread(EndHub, trip_count) 
 
 count_matrix[is.na(count_matrix)] <- 0
 
+hubs <- as.character(count_matrix$StartHub)
+colnames(count_matrix) <- as.character(colnames(count_matrix))
+
 count_matrix <- count_matrix %>%
-  select(EndHub, count_matrix$StartHub)
+  ungroup() %>%
+  select(hubs)
 
-colnames(count_matrix)[2:175] == count_matrix$StartHub
+colnames(count_matrix)[1:174] == hubs
 
-bike_matrix <- as.matrix(count_matrix[1:174, 2:175])
+bike_matrix <- as.matrix(count_matrix[1:174, 1:174])
 colnames(bike_matrix) <- NULL
 
 for (i in 1:174) {
@@ -57,6 +79,7 @@ for (i in 1:174) {
 
 stat_dist_evening <- (bike_matrix %^% 1000)[1,]
 
+image(t(bike_matrix %^% 1000), col = viridis(10))
 stat_dists <- data.frame(station = colnames(count_matrix)[2:175], 
                          morning = stat_dist_morning,
                          evening = stat_dist_evening)
@@ -86,10 +109,12 @@ leaflet() %>%
              color = if_else(sqrt(stat_dists_lat_lon$morning) - sqrt(stat_dists_lat_lon$evening) > 0, "green", "red"), opacity = .85) %>%
   addProviderTiles(providers$Stamen.Toner)
 
+var(stat_dist_evening)
+var(stat_dist_morning)
 
-
-
-
-
+data.frame(stat_dist = c(stat_dist_morning, stat_dist_evening), 
+           time = c(rep("Morning", 174), rep("Evening", 174))) %>%
+  ggplot(aes(x  = stat_dist, col = time)) +
+  geom_density()
 
 
