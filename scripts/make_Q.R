@@ -3,11 +3,11 @@ library(lubridate)
 full_bikes <- read.csv("data/full_bikes_named.csv")
 stations <- read.csv("data/stations.csv")
 
-lambda <- station_to_station <- full_bikes %>%
+lambda <- full_bikes %>%
   mutate(StartTime = hms(StartTime)) %>%
-  filter(StartTime >= hms("7:00:00") & StartTime <= hms("12:00:00"))  %>%
+  filter(StartTime >= hms("7:00:00") & StartTime <= hms("19:00:00"))  %>%
   group_by(StartHub) %>%
-  summarise(trip_count = n() / (5 * length(unique(full_bikes$StartDate))))
+  summarise(trip_count = n() / (12 * length(unique(full_bikes$StartDate))))
   
 
  station_to_station <- full_bikes %>%
