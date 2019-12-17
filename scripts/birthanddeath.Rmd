@@ -1,0 +1,154 @@
+---
+title: "birthdeath"
+author: "Claire Jellison"
+date: "12/16/2019"
+output: html_document
+---
+
+
+```{r}
+library(reshape2)
+library(tidyverse)
+library(lubridate)
+full_bikes <- read.csv("data/full_bikes_named.csv")
+stations <- read.csv("data/stations.csv")
+
+
+```
+
+```{r}
+mu <- full_bikes %>% #find the rate of bikes leaving from each start hub
+  mutate(StartTime = hms(StartTime)) %>%
+  filter(StartTime >= hms("7:00:00") & StartTime <= hms("19:00:00"))  %>%
+  group_by(StartHub) %>%
+  summarise(murate = n() / (12 * length(unique(full_bikes$StartDate))))
+```
+
+```{r}
+lambda <- full_bikes %>%
+  mutate(StartTime = hms(StartTime)) %>%
+  filter(StartTime >= hms("7:00:00") & StartTime <= hms("19:00:00"))  %>%
+  group_by(EndHub) %>%
+  summarise(lambdarate = n() / (12 * length(unique(full_bikes$StartDate))))
+```
+
+```{r}
+lambda <- lambda %>% mutate(Hub = EndHub)
+mu <- mu %>% mutate(Hub = StartHub)
+bnd <- left_join(lambda, mu, by = "Hub") %>% select(Hub, lambdarate, murate)
+head(bnd)
+```
+
+
+```{r}
+#refer to page 299 on stationary distribution 
+bnd <- bnd %>% select(Hub, lambdarate, murate) %>% mutate(leq = lambdarate < murate)
+```
+calculate stationary distribution of bikes at each station for lambda < mu 
+```{r}
+statbnd <- function(lambda, mu, k) {
+  k <- k - 1
+  prop <- round(lambda/mu, digits = 5)
+  pio <- (1 - prop)
+  if (k == 0) 
+  {stat <- pio 
+  }
+  else {stat <- pio * (prop)**k}
+  stat
+  
+}
+```
+
+
+```{r}
+statbndcomp <- function(lambda, mu, k) {
+  k <- k - 1
+  prop <- round(lambda/mu, digits = 8)
+  sum <- 0 
+  for (i in 1:10000){
+  sum <- sum + prop^i}
+  pio <-  1/ (1 + sum)
+  if (k == 0) 
+  {stat <- pio 
+  }
+  else {stat <- pio * (prop)**k}
+  stat
+  
+}
+```
+
+
+```{r}
+for (l in 1:6 ){
+inventory2 <- c("X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "X13", "X14", "X15", "X16", "X17", "X18", "X19", "X20")
+name2 = inventory2[l]
+bnd <- bnd %>% mutate(!!name2 := statbndcomp(lambdarate, murate, l))} 
+head(bnd)
+```
+
+
+
+```{r}
+bndfil <- bnd %>% filter(leq == TRUE) #just get the ones with lower lambda than mu
+for (k in 1:21 ){
+inventory <- c("X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "X11", "X12", "X13", "X14", "X15", "X16", "X17", "X18", "X19", "X20")
+name = inventory[k]
+bndfil <- bndfil %>% mutate(!!name := statbnd(lambdarate, murate, k))} 
+head(bndfil)
+```
+
+see that we've added enough states
+```{r}
+check <- bndfil %>% select (- Hub, -lambdarate, -murate, - leq)
+rowsum <- rowSums(check)
+colsum <- colSums(check)/nrow(check)
+barplot(colsum)
+```
+
+```{r}
+bndfil <- bndfil %>% arrange(desc(X0))
+bndfilup <- bndfil %>% arrange(X0)
+head(bndfilup)
+```
+
+```{r}
+bndstat <- bndfil %>% select(-lambdarate, -murate, - leq)
+bndstat2 <- bndfilup %>% select(-lambdarate, -murate, - leq)
+bndstatall <- bnd %>% select(-lambdarate, -murate, - leq)
+bndstatsub <- bndstat[1:5, ]
+bndstatsub2 <- bndstat2[1:5, ]
+bndstatsuball <- bndstatall[1:5,]
+bndstatsub
+```
+
+```{r}
+bndmelt <- melt(bndstatsuball)
+bndstatmelt <- melt(bndstatsub)
+bndstatmelt2 <- melt(bndstatsub2)
+#combo <- rbind(bndstatallsub, avgdist)
+```
+
+```{r}
+bndstatmelt
+ggplot(bndstatmelt, aes(variable, value, group=factor(Hub))) + geom_point(aes(color=factor(Hub))) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) 
+ggplot(bndmelt, aes(variable, value, group=factor(Hub))) + geom_point(aes(color=factor(Hub))) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) 
+#ggplot(bndstatmelt2, aes(variable, value, group=factor(Hub))) + geom_point(aes(color=factor(Hub)))
+#ggplot(combo, aes(variable, value, group=factor(Hub))) + geom_point(aes(color=factor(Hub))) + 
+  #theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) 
+```
+
+look at trip duration 
+
+```{r}
+duration <- full_bikes %>% #find the rate of bikes leaving from each start hub
+  mutate(StartTime = hms(StartTime)) %>%
+  mutate(Duration = hms(Duration)) %>%
+  filter(StartTime >= hms("7:00:00") & StartTime <= hms("19:00:00"))
+durationtime <- duration %>% group_by(StartHub) %>% summarise(durationavg = mean(Duration))
+durationtime
+```
+
+
+
